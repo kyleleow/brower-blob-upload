@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <p>
+        <input type="file" id="blobFile">
+    </p>
+
+    <p>
+        <button onclick="uploadBlob()">Upload file to blob</button>
+    </p>
+
+    <script type="text/javascript" src="azure-storage.blob.js"></script>
+    <script type="text/javascript">
+        const blobUri = 'https://agmoweb.blob.core.windows.net';
+        const SASKey = 'Your_SAS_Key';
+        const containerName = 'Your_Container_Name';
+        var blobResult;
+        var blobResponse;
+        var blobService = AzureStorage.Blob.createBlobServiceWithSas(blobUri, SASKey);
+
+        var uploadBlob = function () {
+            var file = document.getElementById("blobFile").files[0];
+
+            if (file) {
+
+                //create container
+                blobService.createContainerIfNotExists(containerName, (error, container) => {
+                    if (error) {
+                        console.log('Error while creating container:', containerName);
+                    } else {
+                        console.log(container.name);
+                    }
+                });
+
+                var customBlockSize = file.size > 1024 * 1024 * 32 ? 1024 * 1024 * 4 : 1024 * 512;
+                blobService.singleBlobPutThresholdInBytes = customBlockSize;
+
+                //generate unique blob name
+                const filename = file.name.substring(0, file.name.lastIndexOf('.'));
+                const ext = file.name.substring(file.name.lastIndexOf('.'));
+                const blobname = filename + '_' + Math.random().toString(16).slice(2) + ext;
+
+                const speedSummary = blobService.createBlockBlobFromBrowserFile(containerName, blobname, file, { blockSize: customBlockSize }, function (error, result, response) {
+                    blobResult = result;
+                    blobResponse = response;
+
+                    console.log(blobResult, blobResponse)
+                    if (error) {
+                        // Upload blob failed
+                        alert("blob upload failed");
+                    } else {
+                        // Upload successfully
+                        console.log(result, response)
+                        alert("blob upload successful");
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
